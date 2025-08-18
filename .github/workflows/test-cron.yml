@@ -1,0 +1,13 @@
+name: Test Cron Every Minute
+
+on:
+  schedule:
+    - cron: "*/1 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  echo_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo hello
+        run: echo "Hallo Tom 🚀 – dieser Workflow läuft minütlich!"
