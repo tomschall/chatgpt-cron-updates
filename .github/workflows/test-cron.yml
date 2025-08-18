@@ -1,4 +1,4 @@
-name: Test Cron Every Minute
+name: Test Cron Every 5 Minutes
 
 on:
   schedule:
@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Echo hello
-        run: echo "Hallo Tom 🚀 – dieser Workflow läuft minütlich!"
+        run: echo "Hallo Tom 🚀 – dieser Workflow läuft alle 5 Minuten! Dies ist der kürzestet Intervall, der auf Github möglich ist!"
