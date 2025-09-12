@@ -1,89 +1,256 @@
 #!/usr/bin/env python3
+import os
 import time
+import math
+import json
+import random
 import requests
 import pandas as pd
 from tabulate import tabulate
 from datetime import datetime, timezone
+from typing import Dict, Any, List
 
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 
-# --- Config (minimal & nachvollziehbar) ---
-VS_CURRENCY = "usd"
-PAGES = 12              # 2*250=500 Coins scannen (für MVP genug)
-PER_PAGE = 250
-MCAP_MAX = 250_000_000  # < 150 Mio = Moonshot-Range
-MCAP_MIN = 2_000_000    # zu kleine Projekte filtern (Illiquidität/Scam-Risiko)
-VOL_MIN = 50_000        # min. 24h-Volumen (Liquidität)
-TOP_N = 25              # Ausgabegröße
+# ------------------------
+# Konfig (ENV überschreibt)
+# ------------------------
+VS_CURRENCY = os.getenv("VS_CURRENCY", "usd")
+PAGES = int(os.getenv("PAGES", "8"))                # erstmal moderat, wegen Rate-Limits
+PER_PAGE = int(os.getenv("PER_PAGE", "250"))
+MCAP_MAX = int(os.getenv("MCAP_MAX", "250000000"))
+MCAP_MIN = int(os.getenv("MCAP_MIN", "2000000"))
+VOL_MIN = int(os.getenv("VOL_MIN", "50000"))
+TOP_N = int(os.getenv("TOP_N", "25"))
 
-# einfache Gewichte: Summe = 1.0
+# Gewichte (Summe 1.0)
 WEIGHTS = {
-    "inv_mcap": 0.35,      # kleinere Market Cap = besser
-    "vol_to_mcap": 0.25,   # Liquidität relativ zur Größe
-    "mom_7d": 0.20,        # Momentum 7d
-    "mom_30d": 0.20,       # Momentum 30d
+    "inv_mcap": float(os.getenv("W_INV_MCAP", "0.35")),
+    "vol_to_mcap": float(os.getenv("W_VOL_TO_MCAP", "0.25")),
+    "mom_7d": float(os.getenv("W_MOM_7D", "0.20")),
+    "mom_30d": float(os.getenv("W_MOM_30D", "0.20")),
 }
 
+API_KEY = os.getenv("COINGECKO_API_KEY", "").strip()
+HEADERS = {
+    "User-Agent": "MoonshotCopilot/0.2 (+github.com/tomschall)",
+    **({"x-cg-demo-api-key": API_KEY} if API_KEY else {}),
+}
 
-def fetch_markets(page: int) -> list:
+# Backoff-Settings
+MAX_ATTEMPTS = int(os.getenv("MAX_ATTEMPTS", "6"))
+BASE_WAIT = float(os.getenv("BASE_WAIT", "2.0"))
+JITTER_MIN = float(os.getenv("JITTER_MIN", "0.3"))
+JITTER_MAX = float(os.getenv("JITTER_MAX", "1.7"))
+
+
+def log(msg: str) -> None:
+    now = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    print(f"[{now}] {msg}")
+
+
+def zscore(series: pd.Series) -> pd.Series:
+    s = series.fillna(series.median())
+    std = s.std(ddof=0)
+    if std == 0 or math.isnan(std):
+        return pd.Series([0] * len(s), index=s.index)
+    z = (s - s.mean()) / std
+    return z.clip(-3, 3)
+
+
+def fetch_markets(page: int, vs_currency: str) -> List[Dict[str, Any]]:
     params = {
-        "vs_currency": VS_CURRENCY,
+        "vs_currency": vs_currency,
         "order": "market_cap_asc",
         "per_page": PER_PAGE,
         "page": page,
         "price_change_percentage": "24h,7d,30d",
         "sparkline": "false",
     }
-    HEADERS = {"User-Agent": "MoonshotCopilot/0.1 (+github.com/tomschall)"}
-    r = requests.get(f"{COINGECKO_BASE}/coins/markets", params=params, headers=HEADERS, timeout=30)
-    r.raise_for_status()
-    return r.json()
+    last_err = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        r = requests.get(
+            f"{COINGECKO_BASE}/coins/markets",
+            params=params,
+            headers=HEADERS,
+            timeout=30,
+        )
+        if r.status_code == 429:
+            ra = r.headers.get("Retry-After")
+            if ra:
+                wait = float(ra)
+            else:
+                wait = (2 ** (attempt - 1)) * BASE_WAIT + random.uniform(JITTER_MIN, JITTER_MAX)
+            log(f"429 rate-limit page={page} attempt={attempt}/{MAX_ATTEMPTS} → sleep {wait:.1f}s")
+            time.sleep(wait)
+            continue
+        try:
+            r.raise_for_status()
+            return r.json()
+        except requests.HTTPError as e:
+            last_err = e
+            if 500 <= r.status_code < 600:
+                wait = (2 ** (attempt - 1)) + random.uniform(JITTER_MIN, JITTER_MAX)
+                log(f"{r.status_code} server err page={page} attempt={attempt} → sleep {wait:.1f}s")
+                time.sleep(wait)
+                continue
+            raise
+    raise RuntimeError(f"Failed to fetch page {page} after {MAX_ATTEMPTS} attempts") from last_err
 
 
-def zscore(series: pd.Series) -> pd.Series:
-    # Robuster Z-Score (winsorize light): NaNs->0, clamp extremes
-    s = series.fillna(series.median())
-    if s.std(ddof=0) == 0:
-        return pd.Series([0]*len(s), index=s.index)
-    z = (s - s.mean()) / s.std(ddof=0)
-    return z.clip(-3, 3)
+def stablecoin_mask(df: pd.DataFrame) -> pd.Series:
+    maybe_stable = (
+        df["name"].str.contains("usd", case=False, na=False)
+        | df["symbol"].str.contains("usd", case=False, na=False)
+    )
+    low_vol = df["price_change_percentage_24h_in_currency"].abs().fillna(0) < 0.2
+    return (maybe_stable & low_vol)
 
 
-def main():
-    all_rows = []
+def render_report_md(
+    out: pd.DataFrame,
+    stats: Dict[str, Any],
+    weights: Dict[str, float],
+    filters: Dict[str, Any],
+) -> str:
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    header = f"# Moonshot Report\n\nStand: **{ts}**\n\n"
+    desc = (
+        "Kriterien (MVP): Market Cap ≥ {mmin:,} & ≤ {mmax:,} USD, "
+        "24h-Volumen ≥ {vmin:,}, Stablecoins ausgeschlossen.\n"
+        "Score = gewichtete Z-Scores: kleiner MCAP (besser), Volumen/MCAP, Momentum 7d & 30d.\n\n"
+        "**Hinweis:** Nur Research/Signale, keine Finanzberatung.\n\n"
+    ).format(mmin=filters["MCAP_MIN"], mmax=filters["MCAP_MAX"], vmin=filters["VOL_MIN"])
+
+    if out.empty:
+        body = "_(Keine Kandidaten nach aktuellen Filtern gefunden.)_\n"
+    else:
+        # hübsche Spaltennamen, Rundung
+        table = out.copy()
+        for c in ["price_usd", "mcap_usd", "vol_24h_usd"]:
+            table[c] = table[c].map(lambda v: f"{v:,.2f}")
+        for c in ["ch_7d_pct", "ch_30d_pct", "moonshot_score"]:
+            table[c] = table[c].map(lambda v: f"{v:.3f}")
+        body = tabulate(table, headers="keys", tablefmt="github", showindex=False)
+
+    stats_md = (
+        "\n\n### Scan-Stats\n"
+        f"- Pages requested: **{stats['pages']}** à {stats['per_page']} Items\n"
+        f"- Fetched rows: **{stats['fetched']}**\n"
+        f"- After MCAP/VOL: **{stats['after_base_filter']}**\n"
+        f"- Stable-like removed: **{stats['stable_removed']}**\n"
+        f"- Remaining for scoring: **{stats['remaining']}**\n"
+    )
+
+    footer = (
+        "\n\n*Weights:* "
+        f"{json.dumps(weights)}  \n*Quelle:* CoinGecko `/coins/markets`  \n"
+        "*Nächste Ausbaustufe:* Dev-Aktivität (GitHub), Social-Momentum, Narrativ-Erkennung.\n"
+    )
+    return header + desc + body + stats_md + footer
+
+
+def main() -> None:
+    t0 = time.perf_counter()
+    all_rows: List[Dict[str, Any]] = []
+
     for p in range(1, PAGES + 1):
-        data = fetch_markets(p)
+        data = fetch_markets(p, VS_CURRENCY)
         all_rows.extend(data)
-        time.sleep(1.2)  # sanft zur API
+        # sanfter Takt zwischen den Seiten
+        pause = BASE_WAIT + random.uniform(JITTER_MIN, JITTER_MAX)
+        time.sleep(pause)
 
-    df = pd.DataFrame(all_rows)
-
-    # Grundfilter
-    df = df[
-        (df["market_cap"].notna()) &
-        (df["total_volume"].notna()) &
-        (df["market_cap"] >= MCAP_MIN) &
-        (df["market_cap"] <= MCAP_MAX) &
-        (df["total_volume"] >= VOL_MIN)
-    ].copy()
-
-    # Stablecoins raus (heuristisch: name/symbol enthält "usd", Preisbewegung sehr gering)
-    maybe_stable = df["name"].str.contains("usd", case=False, na=False) | df["symbol"].str.contains("usd", case=False, na=False)
-    low_volatility = df["price_change_percentage_24h_in_currency"].abs().fillna(0) < 0.2
-    df = df[~(maybe_stable & low_volatility)].copy()
-
-    if df.empty:
-        md = "# Moonshot Report\n\n*(Keine Kandidaten nach aktuellen Filtern gefunden.)*\n"
+    raw = pd.DataFrame(all_rows)
+    fetched = len(raw)
+    if fetched == 0:
+        md = "# Moonshot Report\n\n*(API lieferte keine Daten – später erneut versuchen.)*\n"
         with open("report.md", "w", encoding="utf-8") as f:
             f.write(md)
-        # leere JSON-Datei anlegen, damit git add nicht scheitert
         with open("report_top.json", "w", encoding="utf-8") as f:
             f.write("[]\n")
-        print("No candidates after filter. Wrote empty report and JSON.")
+        log("No data from API. Wrote empty report & JSON.")
         return
 
-    # Feature Engineering
-    df["inv_mcap_feat"] = 1 / df["market_cap"].astype(float)          # kleiner besser
+    # Basisfilter
+    df = raw[
+        (raw["market_cap"].notna())
+        & (raw["total_volume"].notna())
+        & (raw["market_cap"] >= MCAP_MIN)
+        & (raw["market_cap"] <= MCAP_MAX)
+        & (raw["total_volume"] >= VOL_MIN)
+    ].copy()
+    after_base = len(df)
+
+    # Stablecoins raus
+    st_mask = stablecoin_mask(df)
+    stable_cnt = int(st_mask.sum())
+    df = df[~st_mask].copy()
+    remaining = len(df)
+
+    # Falls leer → Watchlist-Fallback (damit der Report nie leer ist)
+    if df.empty:
+        watch = (
+            raw[raw["market_cap"].notna() & (raw["market_cap"] <= MCAP_MAX)]
+            .sort_values("market_cap", ascending=True)
+            .head(max(TOP_N, 25))
+            .copy()
+        )
+        watch = watch[
+            [
+                "market_cap_rank",
+                "id",
+                "symbol",
+                "name",
+                "current_price",
+                "market_cap",
+                "total_volume",
+                "price_change_percentage_7d_in_currency",
+                "price_change_percentage_30d_in_currency",
+            ]
+        ]
+        watch.rename(
+            columns={
+                "market_cap_rank": "rank",
+                "current_price": "price_usd",
+                "market_cap": "mcap_usd",
+                "total_volume": "vol_24h_usd",
+                "price_change_percentage_7d_in_currency": "ch_7d_pct",
+                "price_change_percentage_30d_in_currency": "ch_30d_pct",
+            },
+            inplace=True,
+        )
+        for c in ["price_usd", "mcap_usd", "vol_24h_usd"]:
+            watch[c] = watch[c].astype(float).round(2)
+        for c in ["ch_7d_pct", "ch_30d_pct"]:
+            watch[c] = watch[c].astype(float).round(3)
+
+        stats = {
+            "pages": PAGES,
+            "per_page": PER_PAGE,
+            "fetched": fetched,
+            "after_base_filter": after_base,
+            "stable_removed": stable_cnt,
+            "remaining": remaining,
+        }
+        md = render_report_md(
+            out=pd.DataFrame(columns=[]),  # leerer Hauptteil
+            stats=stats,
+            weights=WEIGHTS,
+            filters={"MCAP_MIN": MCAP_MIN, "MCAP_MAX": MCAP_MAX, "VOL_MIN": VOL_MIN},
+        )
+        md += "\n\n### Watchlist (Relaxed Filters)\n"
+        md += tabulate(watch, headers="keys", tablefmt="github", showindex=False)
+
+        with open("report.md", "w", encoding="utf-8") as f:
+            f.write(md)
+        with open("report_top.json", "w", encoding="utf-8") as f:
+            f.write(watch.to_json(orient="records", indent=2))
+        log("No candidates after strict filters. Wrote Watchlist fallback.")
+        return
+
+    # Features
+    df["inv_mcap_feat"] = 1.0 / df["market_cap"].astype(float)
     df["vol_to_mcap_feat"] = (df["total_volume"] / df["market_cap"]).astype(float)
     df["mom_7d_feat"] = df["price_change_percentage_7d_in_currency"].astype(float)
     df["mom_30d_feat"] = df["price_change_percentage_30d_in_currency"].astype(float)
@@ -96,60 +263,63 @@ def main():
 
     # Weighted Score
     df["moonshot_score"] = (
-        WEIGHTS["inv_mcap"] * df["z_inv_mcap"] +
-        WEIGHTS["vol_to_mcap"] * df["z_vol_to_mcap"] +
-        WEIGHTS["mom_7d"] * df["z_mom_7d"] +
-        WEIGHTS["mom_30d"] * df["z_mom_30d"]
+        WEIGHTS["inv_mcap"] * df["z_inv_mcap"]
+        + WEIGHTS["vol_to_mcap"] * df["z_vol_to_mcap"]
+        + WEIGHTS["mom_7d"] * df["z_mom_7d"]
+        + WEIGHTS["mom_30d"] * df["z_mom_30d"]
     )
 
-    # Sort & select
     cols = [
-        "market_cap_rank", "id", "symbol", "name", "current_price", "market_cap",
-        "total_volume", "price_change_percentage_7d_in_currency", "price_change_percentage_30d_in_currency",
-        "moonshot_score"
+        "market_cap_rank",
+        "id",
+        "symbol",
+        "name",
+        "current_price",
+        "market_cap",
+        "total_volume",
+        "price_change_percentage_7d_in_currency",
+        "price_change_percentage_30d_in_currency",
+        "moonshot_score",
     ]
     out = df.sort_values("moonshot_score", ascending=False)[cols].head(TOP_N).copy()
-
-    # Schönere Spalten
-    out.rename(columns={
-        "market_cap_rank": "rank",
-        "current_price": "price_usd",
-        "market_cap": "mcap_usd",
-        "total_volume": "vol_24h_usd",
-        "price_change_percentage_7d_in_currency": "ch_7d_pct",
-        "price_change_percentage_30d_in_currency": "ch_30d_pct",
-    }, inplace=True)
-
-    # Runden
+    out.rename(
+        columns={
+            "market_cap_rank": "rank",
+            "current_price": "price_usd",
+            "market_cap": "mcap_usd",
+            "total_volume": "vol_24h_usd",
+            "price_change_percentage_7d_in_currency": "ch_7d_pct",
+            "price_change_percentage_30d_in_currency": "ch_30d_pct",
+        },
+        inplace=True,
+    )
     for c in ["price_usd", "mcap_usd", "vol_24h_usd"]:
-        out[c] = out[c].round(2)
+        out[c] = out[c].astype(float).round(2)
     for c in ["ch_7d_pct", "ch_30d_pct", "moonshot_score"]:
-        out[c] = out[c].round(3)
+        out[c] = out[c].astype(float).round(3)
 
-    # Markdown-Report
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    header = f"# Moonshot Report\n\nStand: **{ts}**\n\n"
-    desc = (
-        "Kriterien (MVP): Market Cap 5–150 Mio USD, 24h-Volumen ≥ 100k, Stablecoins ausgeschlossen.\n"
-        "Score = gewichtete Z-Scores aus: kleiner MCAP (besser), Volumen/MCAP, Momentum 7d & 30d.\n\n"
-        "**Hinweis:** Nur Research/Signale, keine Finanzberatung.\n\n"
+    stats = {
+        "pages": PAGES,
+        "per_page": PER_PAGE,
+        "fetched": fetched,
+        "after_base_filter": after_base,
+        "stable_removed": stable_cnt,
+        "remaining": remaining,
+    }
+    md = render_report_md(
+        out=out,
+        stats=stats,
+        weights=WEIGHTS,
+        filters={"MCAP_MIN": MCAP_MIN, "MCAP_MAX": MCAP_MAX, "VOL_MIN": VOL_MIN},
     )
-    table_md = tabulate(out, headers="keys", tablefmt="github", showindex=False)
-    footer = (
-        "\n\n*Weights:* "
-        f"{WEIGHTS}  \n*Quelle:* CoinGecko `/coins/markets`  \n"
-        "*Nächste Ausbaustufe:* Dev-Aktivität (GitHub), Social-Momentum, Narrativ-Erkennung.\n"
-    )
-    md = header + desc + table_md + footer
 
     with open("report.md", "w", encoding="utf-8") as f:
         f.write(md)
-
-    # Zusätzlich Rohdaten-Snapshot (optional)
     out.to_json("report_top.json", orient="records", indent=2)
 
-    print(f"Candidates after scoring: {len(out)}")
-    print("Wrote report.md and report_top.json")
+    elapsed = time.perf_counter() - t0
+    log(f"Candidates after scoring: {len(out)}")
+    log(f"Wrote report.md and report_top.json in {elapsed:.2f}s")
 
 
 if __name__ == "__main__":

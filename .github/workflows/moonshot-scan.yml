@@ -40,6 +40,13 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run scanner
+        env:
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+          PAGES: "8" # kannst du später hochdrehen (10–12)
+          VOL_MIN: "50000"
+          MCAP_MIN: "2000000"
+          MCAP_MAX: "250000000"
+          TOP_N: "25"
         run: python moonshot_scan.py
 
       - name: Commit report if changed
