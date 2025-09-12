@@ -1,16 +1,29 @@
 name: Moonshot Scan
 
 on:
-  # schedule:
-  #   # 06:00 Europe/Zurich ≈ 04:00 UTC
-  #   - cron: "0 4 * * *"
-  workflow_dispatch: {}
+  push:
+    branches:
+      - "**" # alle Branches (inkl. Feature-Branches)
+    # Optional: nur laufen, wenn relevante Files geändert wurden
+    # paths:
+    #   - "moonshot_scan.py"
+    #   - "requirements.txt"
+    #   - ".github/workflows/moonshot-scan.yml"
+
+  pull_request:
+    branches:
+      - "**"
+
+  workflow_dispatch: {} # manueller Start (branchauswahl im UI)
+
+  schedule:
+    - cron: "0 4 * * *" # Läuft NUR auf dem Default Branch (z.B. main)
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
