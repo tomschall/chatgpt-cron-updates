@@ -303,14 +303,8 @@ def engineer_and_score(df: pd.DataFrame, weights: Dict[str, float]) -> pd.DataFr
 
 
 def add_display_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Baut Anzeige-Spalten. Robust gegenüber vorherigen Renames:
-    - akzeptiert sowohl 'current_price' als auch bereits 'price_usd'
-    - erzeugt fehlende Felder leer/NaN
-    """
     df = df.copy()
 
-    # Sicherstellen, dass die Felder existieren (ggf. von umbenannten Spalten ableiten)
     def ensure(col: str, fallback_cols: list[str] = None):
         if col in df.columns:
             return
@@ -318,43 +312,40 @@ def add_display_columns(df: pd.DataFrame) -> pd.DataFrame:
             if fb in df.columns:
                 df[col] = df[fb]
                 return
-        df[col] = pd.NA  # not found → create empty
+        df[col] = pd.NA
 
-    # Preis/MCAP/Volumen: akzeptiere beide Varianten (roh oder bereits umbenannt)
+    # Zahlenfelder (akzeptiere raw oder schon umbenannt)
     ensure("current_price", ["price_usd"])
     ensure("market_cap", ["mcap_usd"])
     ensure("total_volume", ["vol_24h_usd"])
-
-    # Prozentänderungen
     ensure("price_change_percentage_24h_in_currency", ["ch_24h_pct"])
     ensure("price_change_percentage_7d_in_currency", ["ch_7d_pct"])
     ensure("price_change_percentage_30d_in_currency", ["ch_30d_pct"])
 
     # Identität/Meta
-    ensure("id", [])
-    ensure("symbol", [])
-    ensure("name", [])
-    ensure("image", [])
+    ensure("id")
+    ensure("symbol")
+    ensure("name")
+    ensure("image")
+
+    # Rank robust ableiten
+    if "rank" not in df.columns:
+        if "market_cap_rank" in df.columns:
+            df["rank"] = df["market_cap_rank"]
+        else:
+            df["rank"] = pd.NA
 
     # Zahlen konvertieren & runden
     df["price_usd"] = pd.to_numeric(df["current_price"], errors="coerce").round(6)
     df["mcap_usd"] = pd.to_numeric(df["market_cap"], errors="coerce").round(0)
     df["vol_24h_usd"] = pd.to_numeric(df["total_volume"], errors="coerce").round(0)
+    df["ch_24h_pct"] = pd.to_numeric(df["price_change_percentage_24h_in_currency"], errors="coerce").round(3)
+    df["ch_7d_pct"] = pd.to_numeric(df["price_change_percentage_7d_in_currency"], errors="coerce").round(3)
+    df["ch_30d_pct"] = pd.to_numeric(df["price_change_percentage_30d_in_currency"], errors="coerce").round(3)
 
-    df["ch_24h_pct"] = pd.to_numeric(
-        df["price_change_percentage_24h_in_currency"], errors="coerce"
-    ).round(3)
-    df["ch_7d_pct"] = pd.to_numeric(
-        df["price_change_percentage_7d_in_currency"], errors="coerce"
-    ).round(3)
-    df["ch_30d_pct"] = pd.to_numeric(
-        df["price_change_percentage_30d_in_currency"], errors="coerce"
-    ).round(3)
-
-    # CoinGecko-Link
+    # Links & Thumbnails
     df["cg_url"] = "https://www.coingecko.com/en/coins/" + df["id"].astype(str)
 
-    # Thumbnail (Markdown/HTML)
     def img_md(url: str) -> str:
         if not isinstance(url, str) or not url:
             return ""
@@ -397,17 +388,20 @@ def format_top(df: pd.DataFrame, top_n: int) -> pd.DataFrame:
 # Reporting
 # =========================
 def render_report_md_table(table_df: pd.DataFrame) -> str:
-    table_cols = ["image_md"] + DISPLAY_COLS
-    table = table_df[table_cols].rename(columns={"image_md": "logo"}).copy()
+    # nur Spalten nehmen, die da sind
+    want = ["image_md"] + DISPLAY_COLS
+    have = [c for c in want if c in table_df.columns]
+    table = table_df[have].rename(columns={"image_md": "logo"}).copy()
 
-    # Formatierungen für Anzeige
-    for c in ["price_usd"]:
-        table[c] = table[c].map(lambda v: f"{v:,.6f}")
-    for c in ["mcap_usd", "vol_24h_usd"]:
-        table[c] = table[c].map(lambda v: f"{int(v):,}")
-    for c in ["ch_24h_pct", "ch_7d_pct", "ch_30d_pct", "moonshot_score"]:
+    # Formatierungen
+    if "price_usd" in table.columns:
+        table["price_usd"] = table["price_usd"].map(lambda v: f"{v:,.6f}")
+    for c in ("mcap_usd", "vol_24h_usd"):
         if c in table.columns:
-            table[c] = table[c].map(lambda v: f"{float(v):.3f}")
+            table[c] = table[c].map(lambda v: f"{int(v):,}" if pd.notna(v) else "")
+    for c in ("ch_24h_pct", "ch_7d_pct", "ch_30d_pct", "moonshot_score"):
+        if c in table.columns:
+            table[c] = table[c].map(lambda v: f"{float(v):.3f}" if pd.notna(v) else "")
     return tabulate(table, headers="keys", tablefmt="github", showindex=False)
 
 
