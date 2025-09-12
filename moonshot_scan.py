@@ -34,7 +34,8 @@ def fetch_markets(page: int) -> list:
         "price_change_percentage": "24h,7d,30d",
         "sparkline": "false",
     }
-    r = requests.get(f"{COINGECKO_BASE}/coins/markets", params=params, timeout=30)
+    HEADERS = {"User-Agent": "MoonshotCopilot/0.1 (+github.com/tomschall)"}
+    r = requests.get(f"{COINGECKO_BASE}/coins/markets", params=params, headers=HEADERS, timeout=30)
     r.raise_for_status()
     return r.json()
 
@@ -75,6 +76,10 @@ def main():
         md = "# Moonshot Report\n\n*(Keine Kandidaten nach aktuellen Filtern gefunden.)*\n"
         with open("report.md", "w", encoding="utf-8") as f:
             f.write(md)
+        # leere JSON-Datei anlegen, damit git add nicht scheitert
+        with open("report_top.json", "w", encoding="utf-8") as f:
+            f.write("[]\n")
+        print("No candidates after filter. Wrote empty report and JSON.")
         return
 
     # Feature Engineering
@@ -142,6 +147,9 @@ def main():
 
     # Zusätzlich Rohdaten-Snapshot (optional)
     out.to_json("report_top.json", orient="records", indent=2)
+
+    print(f"Candidates after scoring: {len(out)}")
+    print("Wrote report.md and report_top.json")
 
 
 if __name__ == "__main__":

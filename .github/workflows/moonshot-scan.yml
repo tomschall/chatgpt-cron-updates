@@ -43,10 +43,14 @@ jobs:
         run: python moonshot_scan.py
 
       - name: Commit report if changed
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add report.md report_top.json || true
+
+          git add report.md || true
+          git add report_top.json || true
+
           if ! git diff --cached --quiet; then
             git commit -m "chore: update moonshot report [skip ci]"
             git push
