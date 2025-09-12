@@ -303,15 +303,58 @@ def engineer_and_score(df: pd.DataFrame, weights: Dict[str, float]) -> pd.DataFr
 
 
 def add_display_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Baut Anzeige-Spalten. Robust gegenüber vorherigen Renames:
+    - akzeptiert sowohl 'current_price' als auch bereits 'price_usd'
+    - erzeugt fehlende Felder leer/NaN
+    """
     df = df.copy()
+
+    # Sicherstellen, dass die Felder existieren (ggf. von umbenannten Spalten ableiten)
+    def ensure(col: str, fallback_cols: list[str] = None):
+        if col in df.columns:
+            return
+        for fb in (fallback_cols or []):
+            if fb in df.columns:
+                df[col] = df[fb]
+                return
+        df[col] = pd.NA  # not found → create empty
+
+    # Preis/MCAP/Volumen: akzeptiere beide Varianten (roh oder bereits umbenannt)
+    ensure("current_price", ["price_usd"])
+    ensure("market_cap", ["mcap_usd"])
+    ensure("total_volume", ["vol_24h_usd"])
+
+    # Prozentänderungen
+    ensure("price_change_percentage_24h_in_currency", ["ch_24h_pct"])
+    ensure("price_change_percentage_7d_in_currency", ["ch_7d_pct"])
+    ensure("price_change_percentage_30d_in_currency", ["ch_30d_pct"])
+
+    # Identität/Meta
+    ensure("id", [])
+    ensure("symbol", [])
+    ensure("name", [])
+    ensure("image", [])
+
+    # Zahlen konvertieren & runden
     df["price_usd"] = pd.to_numeric(df["current_price"], errors="coerce").round(6)
     df["mcap_usd"] = pd.to_numeric(df["market_cap"], errors="coerce").round(0)
     df["vol_24h_usd"] = pd.to_numeric(df["total_volume"], errors="coerce").round(0)
-    df["ch_24h_pct"] = pd.to_numeric(df["price_change_percentage_24h_in_currency"], errors="coerce").round(3)
-    df["ch_7d_pct"] = pd.to_numeric(df["price_change_percentage_7d_in_currency"], errors="coerce").round(3)
-    df["ch_30d_pct"] = pd.to_numeric(df["price_change_percentage_30d_in_currency"], errors="coerce").round(3)
+
+    df["ch_24h_pct"] = pd.to_numeric(
+        df["price_change_percentage_24h_in_currency"], errors="coerce"
+    ).round(3)
+    df["ch_7d_pct"] = pd.to_numeric(
+        df["price_change_percentage_7d_in_currency"], errors="coerce"
+    ).round(3)
+    df["ch_30d_pct"] = pd.to_numeric(
+        df["price_change_percentage_30d_in_currency"], errors="coerce"
+    ).round(3)
+
+    # CoinGecko-Link
     df["cg_url"] = "https://www.coingecko.com/en/coins/" + df["id"].astype(str)
 
+    # Thumbnail (Markdown/HTML)
     def img_md(url: str) -> str:
         if not isinstance(url, str) or not url:
             return ""
@@ -322,7 +365,11 @@ def add_display_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def format_top(df: pd.DataFrame, top_n: int) -> pd.DataFrame:
-    cols = [
+    """
+    Wählt Top N nach Score und baut Anzeige-Spalten.
+    Wichtig: KEINE Umbenennungen vor add_display_columns() mehr!
+    """
+    base_cols = [
         "market_cap_rank", "id", "symbol", "name", "image",
         "current_price", "market_cap", "total_volume",
         "price_change_percentage_24h_in_currency",
@@ -330,24 +377,19 @@ def format_top(df: pd.DataFrame, top_n: int) -> pd.DataFrame:
         "price_change_percentage_30d_in_currency",
         "moonshot_score",
     ]
+    # Nimm nur Spalten, die existieren (robust gegen API-Variationen)
+    cols = [c for c in base_cols if c in df.columns] + ["moonshot_score"]
+    cols = list(dict.fromkeys(cols))  # de-dupe, Reihenfolge wahren
+
     out = df.sort_values("moonshot_score", ascending=False)[cols].head(top_n).copy()
-    out.rename(
-        columns={
-            "market_cap_rank": "rank",
-            "current_price": "price_usd",
-            "market_cap": "mcap_usd",
-            "total_volume": "vol_24h_usd",
-            "price_change_percentage_7d_in_currency": "ch_7d_pct",
-            "price_change_percentage_30d_in_currency": "ch_30d_pct",
-            "price_change_percentage_24h_in_currency": "ch_24h_pct",
-        },
-        inplace=True,
-    )
-    # add pretty/links/images
     out = add_display_columns(out)
-    # kleine Sortstabilität
-    if "rank" in out.columns:
+
+    # leichte Sort-Stabilität (Score desc, Rank asc falls da)
+    if "rank" in out.columns:  # 'rank' kommt ggf. aus add_display_columns nicht; dann nutze market_cap_rank
         out = out.sort_values(["moonshot_score", "rank"], ascending=[False, True])
+    elif "market_cap_rank" in out.columns:
+        out = out.sort_values(["moonshot_score", "market_cap_rank"], ascending=[False, True])
+
     return out
 
 
