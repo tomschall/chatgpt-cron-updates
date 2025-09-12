@@ -9,12 +9,12 @@ COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 
 # --- Config (minimal & nachvollziehbar) ---
 VS_CURRENCY = "usd"
-PAGES = 2               # 2*250=500 Coins scannen (für MVP genug)
+PAGES = 12              # 2*250=500 Coins scannen (für MVP genug)
 PER_PAGE = 250
-MCAP_MAX = 150_000_000  # < 150 Mio = Moonshot-Range
-MCAP_MIN = 5_000_000    # zu kleine Projekte filtern (Illiquidität/Scam-Risiko)
-VOL_MIN = 100_000       # min. 24h-Volumen (Liquidität)
-TOP_N = 20              # Ausgabegrößee
+MCAP_MAX = 250_000_000  # < 150 Mio = Moonshot-Range
+MCAP_MIN = 2_000_000    # zu kleine Projekte filtern (Illiquidität/Scam-Risiko)
+VOL_MIN = 50_000        # min. 24h-Volumen (Liquidität)
+TOP_N = 25              # Ausgabegröße
 
 # einfache Gewichte: Summe = 1.0
 WEIGHTS = {
