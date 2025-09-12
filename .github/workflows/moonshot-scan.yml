@@ -41,12 +41,21 @@ jobs:
 
       - name: Run scanner
         env:
-          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
-          PAGES: "8" # kannst du später hochdrehen (10–12)
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }} # optional, empfohlen
+          SCAN_ORDER: "volume_desc"
+          PAGES: "8"
+          PAGE_OFFSET: "1"
+          PAGE_STEP: "1"
+          TARGET_MIN_CANDS: "10"
+          MAX_RELAX_STEPS: "4"
+          RELAX_VOL_FACTOR: "0.6"
+          RELAX_MCAP_FACTOR: "0.7"
           VOL_MIN: "50000"
           MCAP_MIN: "2000000"
-          MCAP_MAX: "250000000"
-          TOP_N: "25"
+          RELAXED_VOL_MIN: "25000"
+          RELAXED_MCAP_MIN: "1000000"
+          PRICE_MIN: "0.0000001"
+          PRICE_MAX: "20000"
         run: python moonshot_scan.py
 
       - name: Commit report if changed
