@@ -410,11 +410,12 @@ def render_gallery_html(df: pd.DataFrame) -> str:
     for _, r in df.iterrows():
         price = f"${r['price_usd']:,}" if pd.notna(r["price_usd"]) else "-"
         cards.append(
-            f'<div style="display:inline-block;margin:8px;text-align:center">'
+            f'<p align="center">'
             f'{r.get("image_md", "")}<br/>'
             f'<a href="{r["cg_url"]}">{r["name"]}</a><br/>'
-            f'<code>{str(r["symbol"]).upper()}</code> • {price}'
-            f'</div>'
+            f'<code>{str(r["symbol"]).upper()}</code><br/>'
+            f'{price}<br/>'
+            f'</p>'
         )
     return "<p>" + "\n".join(cards) + "</p>\n"
 
@@ -553,7 +554,8 @@ def main() -> None:
 
         stats = {**stats_common, **strict_stats,
                  "used_mcap_min": used_mcap_min, "used_mcap_max": cfg["MCAP_MAX"], "used_vol_min": used_vol_min}
-        md = header + "\n\n### Top Kandidaten (Strict)\n\n" + gallery + table_md + render_stats_md(stats, weights)
+        linebreak = "\n\n---\n\n"
+        md = header + "\n\n### Top Kandidaten (Strict)\n\n" + gallery + linebreak + table_md + render_stats_md(stats, weights)
 
         with open("report.md", "w", encoding="utf-8") as f:
             f.write(md)
