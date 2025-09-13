@@ -1,15 +1,15 @@
 name: Moonshot Scan
 
 on:
-  push:
-    # branches:
-    #   - "**" # alle Branches (inkl. Feature-Branches)
+  # push:
+  #   branches:
+  #     - "**" # alle Branches (inkl. Feature-Branches)
 
-    # Optional: nur laufen, wenn relevante Files geändert wurden
-    # paths:
-    #   - "moonshot_scan.py"
-    #   - "requirements.txt"
-    #   - ".github/workflows/moonshot-scan.yml"
+  # Optional: nur laufen, wenn relevante Files geändert wurden
+  # paths:
+  #   - "moonshot_scan.py"
+  #   - "requirements.txt"
+  #   - ".github/workflows/moonshot-scan.yml"
 
   # pull_request:
   #   branches:
@@ -18,7 +18,7 @@ on:
   workflow_dispatch: {} # manueller Start (branchauswahl im UI)
 
   schedule:
-    - cron: "50 5 * * *" # 07:40 Uhr CEST (Sommerzeit), entspricht 05:40 UTC
+    - cron: "55 5 * * *" # 07:40 Uhr CEST (Sommerzeit), entspricht 05:40 UTC
     # - cron: "*/5 * * * *" # alle 5 Minuten (Testzwecke, entfernen für produktiven Einsatz)
 
 permissions:
