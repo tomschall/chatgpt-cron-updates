@@ -410,7 +410,7 @@ def render_gallery_html(df: pd.DataFrame) -> str:
     for _, r in df.iterrows():
         price = f"${r['price_usd']:,}" if pd.notna(r["price_usd"]) else "-"
         cards.append(
-            f'<p align="center">'
+            f'<p align="left">'
             f'{r.get("image_md", "")}<br/>'
             f'<a href="{r["cg_url"]}">{r["name"]}</a><br/>'
             f'<code>{str(r["symbol"]).upper()}</code><br/>'
