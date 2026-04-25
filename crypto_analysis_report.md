@@ -1,5 +1,5 @@
 # Krypto-Analyse & Prognose Report
-**Stand: 2026-04-24 06:29:29 UTC**
+**Stand: 2026-04-25 06:22:31 UTC**
 
 ## Executive Summary
 
@@ -9,43 +9,43 @@ Dieser Report analysiert die 20 größten Kryptowährungen nach Marktkapitalisie
 
 |   Rank | Symbol     | Name          | Preis      | Market Cap         | Wahrscheinlichkeit ↑   | Wahrscheinlichkeit ↓   | Seitwärts   | Erwartete Änderung   | Empfehlung   | Vertrauen   |
 |--------|------------|---------------|------------|--------------------|------------------------|------------------------|-------------|----------------------|--------------|-------------|
-|      1 | btc        | Bitcoin       | $77,845.00 | $1,558,517,393,446 | 42.9%                  | 35.7%                  | 21.4%       | +1.9%                | WEAK BUY     | 97.1%       |
-|      2 | eth        | Ethereum      | $2,313.90  | $279,257,852,775   | 35.7%                  | 42.9%                  | 21.4%       | +0.6%                | WEAK SELL    | 90.9%       |
-|      3 | usdt       | Tether        | $1.00      | $189,696,306,503   | 43.3%                  | 36.7%                  | 20.0%       | +0.0%                | WEAK BUY     | 100.0%      |
-|      4 | xrp        | XRP           | $1.43      | $88,136,672,385    | 42.9%                  | 35.7%                  | 21.4%       | +0.3%                | WEAK BUY     | 97.4%       |
-|      5 | bnb        | BNB           | $634.47    | $85,531,836,420    | 35.7%                  | 42.9%                  | 21.4%       | -0.1%                | WEAK SELL    | 97.4%       |
-|      6 | usdc       | USDC          | $1.00      | $78,004,317,183    | 36.7%                  | 43.3%                  | 20.0%       | -0.0%                | WEAK SELL    | 100.0%      |
-|      7 | sol        | Solana        | $85.57     | $49,265,809,141    | 35.7%                  | 42.9%                  | 21.4%       | -1.6%                | WEAK SELL    | 96.7%       |
-|      8 | trx        | TRON          | $0.33      | $31,058,210,576    | 42.9%                  | 35.7%                  | 21.4%       | +1.1%                | WEAK BUY     | 99.8%       |
-|      9 | figr_heloc | Figure Heloc  | $1.03      | $17,567,778,771    | 35.7%                  | 42.9%                  | 21.4%       | -0.2%                | WEAK SELL    | 97.7%       |
-|     10 | doge       | Dogecoin      | $0.10      | $15,018,196,226    | 42.9%                  | 35.7%                  | 21.4%       | +0.6%                | WEAK BUY     | 93.5%       |
-|     11 | wbt        | WhiteBIT Coin | $55.03     | $11,756,648,178    | 42.9%                  | 35.7%                  | 21.4%       | -0.0%                | WEAK BUY     | 94.5%       |
-|     12 | usds       | USDS          | $1.00      | $10,937,600,066    | 42.9%                  | 35.7%                  | 21.4%       | +0.0%                | WEAK BUY     | 99.9%       |
-|     13 | hype       | Hyperliquid   | $41.12     | $9,802,113,496     | 35.7%                  | 42.9%                  | 21.4%       | -0.5%                | WEAK SELL    | 99.9%       |
-|     14 | leo        | LEO Token     | $10.29     | $9,471,733,081     | 42.9%                  | 35.7%                  | 21.4%       | +1.5%                | WEAK BUY     | 99.8%       |
-|     15 | ada        | Cardano       | $0.25      | $9,208,699,655     | 35.7%                  | 42.9%                  | 21.4%       | -1.3%                | WEAK SELL    | 97.8%       |
-|     16 | bch        | Bitcoin Cash  | $456.66    | $9,145,022,424     | 35.7%                  | 42.9%                  | 21.4%       | -0.5%                | WEAK SELL    | 99.4%       |
-|     17 | xmr        | Monero        | $379.08    | $6,993,303,980     | 53.3%                  | 26.7%                  | 20.0%       | +3.8%                | WEAK BUY     | 90.3%       |
-|     18 | link       | Chainlink     | $9.29      | $6,756,355,844     | 42.9%                  | 35.7%                  | 21.4%       | -0.1%                | WEAK BUY     | 98.1%       |
-|     19 | m          | MemeCore      | $4.67      | $6,024,371,225     | 45.2%                  | 35.5%                  | 19.4%       | +29.7%               | WEAK BUY     | 89.7%       |
-|     20 | xlm        | Stellar       | $0.18      | $5,832,472,117     | 35.7%                  | 42.9%                  | 21.4%       | +0.6%                | WEAK SELL    | 94.4%       |
+|      1 | btc        | Bitcoin       | $77,523.00 | $1,552,749,362,065 | 42.9%                  | 35.7%                  | 21.4%       | +1.4%                | WEAK BUY     | 97.5%       |
+|      2 | eth        | Ethereum      | $2,315.84  | $279,610,131,839   | 35.7%                  | 42.9%                  | 21.4%       | +0.6%                | WEAK SELL    | 100.0%      |
+|      3 | usdt       | Tether        | $1.00      | $189,696,762,141   | 43.3%                  | 36.7%                  | 20.0%       | +0.0%                | WEAK BUY     | 100.0%      |
+|      4 | xrp        | XRP           | $1.43      | $88,393,240,289    | 42.9%                  | 35.7%                  | 21.4%       | -0.1%                | WEAK BUY     | 100.0%      |
+|      5 | bnb        | BNB           | $636.90    | $85,888,919,418    | 35.7%                  | 42.9%                  | 21.4%       | -0.3%                | WEAK SELL    | 98.4%       |
+|      6 | usdc       | USDC          | $1.00      | $77,749,798,135    | 43.3%                  | 36.7%                  | 20.0%       | +0.0%                | WEAK BUY     | 100.0%      |
+|      7 | sol        | Solana        | $86.32     | $49,707,923,549    | 35.7%                  | 42.9%                  | 21.4%       | -0.9%                | WEAK SELL    | 96.1%       |
+|      8 | trx        | TRON          | $0.32      | $30,680,603,882    | 35.7%                  | 42.9%                  | 21.4%       | -0.0%                | WEAK SELL    | 93.6%       |
+|      9 | figr_heloc | Figure Heloc  | $1.03      | $17,499,704,214    | 42.9%                  | 35.7%                  | 21.4%       | -0.0%                | WEAK BUY     | 97.3%       |
+|     10 | doge       | Dogecoin      | $0.10      | $15,159,800,150    | 42.9%                  | 35.7%                  | 21.4%       | +0.8%                | WEAK BUY     | 96.2%       |
+|     11 | wbt        | WhiteBIT Coin | $54.90     | $11,716,739,674    | 35.7%                  | 42.9%                  | 21.4%       | -0.3%                | WEAK SELL    | 98.5%       |
+|     12 | usds       | USDS          | $1.00      | $10,969,093,809    | 35.7%                  | 42.9%                  | 21.4%       | -0.0%                | WEAK SELL    | 100.0%      |
+|     13 | hype       | Hyperliquid   | $41.17     | $9,818,372,218     | 42.9%                  | 35.7%                  | 21.4%       | -0.5%                | WEAK BUY     | 99.1%       |
+|     14 | leo        | LEO Token     | $10.25     | $9,434,483,320     | 42.9%                  | 35.7%                  | 21.4%       | +1.2%                | WEAK BUY     | 98.0%       |
+|     15 | ada        | Cardano       | $0.25      | $9,329,335,981     | 35.7%                  | 42.9%                  | 21.4%       | -0.8%                | WEAK SELL    | 94.1%       |
+|     16 | bch        | Bitcoin Cash  | $455.50    | $9,124,322,040     | 35.7%                  | 42.9%                  | 21.4%       | -0.5%                | WEAK SELL    | 98.4%       |
+|     17 | link       | Chainlink     | $9.44      | $6,862,197,197     | 42.9%                  | 35.7%                  | 21.4%       | +0.4%                | WEAK BUY     | 92.6%       |
+|     18 | xmr        | Monero        | $368.25    | $6,796,590,741     | 42.9%                  | 35.7%                  | 21.4%       | +1.7%                | WEAK BUY     | 85.3%       |
+|     19 | zec        | Zcash         | $355.80    | $5,943,329,230     | 53.3%                  | 26.7%                  | 20.0%       | +9.6%                | WEAK BUY     | 88.2%       |
+|     20 | cc         | Canton        | $0.15      | $5,873,097,119     | 42.9%                  | 35.7%                  | 21.4%       | +1.7%                | WEAK BUY     | 96.5%       |
 
 ## Marktübersicht
 
 ### Stärkste Momentum-Kandidaten
-- **m**: +29.7% erwartete Änderung (Vertrauen: 89.7%)
-- **xmr**: +3.8% erwartete Änderung (Vertrauen: 90.3%)
-- **btc**: +1.9% erwartete Änderung (Vertrauen: 97.1%)
-- **leo**: +1.5% erwartete Änderung (Vertrauen: 99.8%)
-- **trx**: +1.1% erwartete Änderung (Vertrauen: 99.8%)
+- **zec**: +9.6% erwartete Änderung (Vertrauen: 88.2%)
+- **cc**: +1.7% erwartete Änderung (Vertrauen: 96.5%)
+- **xmr**: +1.7% erwartete Änderung (Vertrauen: 85.3%)
+- **btc**: +1.4% erwartete Änderung (Vertrauen: 97.5%)
+- **leo**: +1.2% erwartete Änderung (Vertrauen: 98.0%)
 
 
 ### Niedrigste Risiko-Kandidaten
-- **usdc**: Risiko-Score 0.00 (Vertrauen: 100.0%)
 - **usdt**: Risiko-Score 0.00 (Vertrauen: 100.0%)
-- **hype**: Risiko-Score 0.00 (Vertrauen: 99.9%)
-- **usds**: Risiko-Score 0.00 (Vertrauen: 99.9%)
-- **leo**: Risiko-Score 0.00 (Vertrauen: 99.8%)
+- **usds**: Risiko-Score 0.00 (Vertrauen: 100.0%)
+- **xrp**: Risiko-Score 0.00 (Vertrauen: 100.0%)
+- **usdc**: Risiko-Score 0.00 (Vertrauen: 100.0%)
+- **eth**: Risiko-Score 0.00 (Vertrauen: 100.0%)
 
 
 ### Kaufempfehlungen (Strong Buy/Buy)
@@ -77,7 +77,7 @@ Dieser Report analysiert die 20 größten Kryptowährungen nach Marktkapitalisie
 ⚠️ **Risikowarnung**: Diese Analyse dient nur zu Informationszwecken und stellt keine Finanzberatung dar. Kryptowährungen sind hochvolatil und mit erheblichen Risiken verbunden.
 
 📊 **Datenquelle**: CoinGecko API
-🕒 **Aktualität**: 2026-04-24 06:29:29 UTC
+🕒 **Aktualität**: 2026-04-25 06:22:31 UTC
 🔄 **Empfehlung**: Regelmäßige Überwachung der Marktentwicklung
 
 ---
